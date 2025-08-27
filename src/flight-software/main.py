@@ -17,6 +17,8 @@ import digitalio
 import microcontroller
 from lib.proveskit_rp2350_v5a.register import Register
 from lib.pysquared.beacon import Beacon
+from fsm.fsm import FSM
+from fsm.data_processes.data_process import DataProcess
 from lib.pysquared.cdh import CommandDataHandler
 from lib.pysquared.config.config import Config
 from lib.pysquared.hardware.busio import _spi_init, initialize_i2c_bus
@@ -53,7 +55,7 @@ logger.info(
 
 
 try:
-    loiter_time: int = 5
+    loiter_time: int = 1800 # 30 minute timer
     for i in range(loiter_time):
         logger.info(f"Code Starting in {loiter_time-i} seconds")
         time.sleep(1)
@@ -139,6 +141,10 @@ try:
         boot_count,
     )
 
+    dp_obj = DataProcess()
+
+    fsm_obj = FSM(dp_obj, logger, beacon)
+
     def nominal_power_loop():
         logger.debug(
             "FC Board Stats",
@@ -153,10 +159,14 @@ try:
 
         sleep_helper.safe_sleep(config.sleep_duration)
 
-    try:
+    try: 
         logger.info("Entering main loop")
         while True:
             # TODO(nateinaction): Modify behavior based on power state
+
+            fsm_obj.execute_fsm_step() # added
+            watchdog.pet() # added
+
             nominal_power_loop()
 
     except Exception as e:
